@@ -1,73 +1,65 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { background: #f0f2f5; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-        #chat-screen { display: none; flex-direction: column; height: 100%; }
-        #chat { flex: 1; overflow-y: scroll; padding: 20px; }
-        .bubble { background: white; padding: 10px 15px; border-radius: 20px; margin-bottom: 10px; max-width: 80%; display: inline-block; }
-        .yellow { color: #f1c40f; font-weight: bold; }
-        #loader { display: none; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { background-color: #dcdcdc; font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        #login-screen { text-align: center; margin-top: 50px; }
+        #chat-screen { display: none; }
+        #messages { height: 300px; overflow-y: scroll; border: 1px solid #ccc; background: white; padding: 10px; margin-bottom: 10px; }
+        .bubble { background-color: #007aff; color: white; padding: 8px 12px; border-radius: 15px; margin-bottom: 10px; width: fit-content; max-width: 80%; }
+        .admin { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="login-screen">
-    <input id="isim" placeholder="İsmini yaz..." style="padding:10px; margin-bottom:10px;">
-    <button onclick="girisYap()">Giriş Yap</button>
-    <div id="loader"></div>
-</div>
+    <div id="login-screen">
+        <input id="isim" placeholder="Isminizi girin...">
+        <button onclick="giris()">Giris Yap</button>
+    </div>
 
-<div id="chat-screen">
-    <div id="users" style="padding:10px; background:#ddd;">Aktifler: <span id="userList"></span></div>
-    <div id="chat"></div>
-    <div id="typing" style="padding:5px; color:gray; font-size:12px;"></div>
-    <input id="mesaj" placeholder="Mesajını yaz..." style="padding:15px;" onkeypress="if(event.key==='Enter') gonder()">
-</div>
+    <div id="chat-screen">
+        <div id="messages"></div>
+        <input id="input" style="width: 70%;">
+        <button onclick="gonder()">Gonder</button>
+    </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    const socket = io();
-    let myName = "";
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+        var name = "";
 
-    function girisYap() {
-        myName = document.getElementById('isim').value;
-        if (!myName) return;
-        document.getElementById('loader').style.display = 'block';
-        setTimeout(() => {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('chat-screen').style.display = 'flex';
-            socket.emit('login', myName);
-        }, 2000);
-    }
+        function giris() {
+            name = document.getElementById('isim').value;
+            if(name) {
+                socket.emit('login', name);
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('chat-screen').style.display = 'block';
+            }
+        }
 
-    const input = document.getElementById('mesaj');
-    input.addEventListener('input', () => socket.emit('typing', true));
-    input.addEventListener('blur', () => socket.emit('typing', false));
+        function gonder() {
+            var input = document.getElementById('input');
+            if(input.value) {
+                socket.emit('chat message', input.value);
+                input.value = '';
+            }
+        }
 
-    function gonder() {
-        const mesaj = input.value;
-        if (!mesaj) return;
-        let renk = (mesaj === "Asvbnajknsğfkasğsf") ? "yellow" : "black";
-        socket.emit('chat message', { mesaj, renk });
-        input.value = '';
-        socket.emit('typing', false);
-    }
-
-    socket.on('chat message', (data) => {
-        const prefix = (data.isim === 'PAPALES90') ? '[Yönetici] ' : '';
-        const chat = document.getElementById('chat');
-        chat.innerHTML += `<div class="bubble ${data.renk}"><b>${prefix}${data.isim}:</b> ${data.mesaj} <small style="display:block; font-size:9px;">${data.zaman}</small></div>`;
-        chat.scrollTop = chat.scrollHeight;
-    });
-
-    socket.on('updateUserList', (users) => document.getElementById('userList').innerText = users.join(', '));
-    socket.on('userTyping', (data) => document.getElementById('typing').innerText = data.isTyping ? `${data.name} yazıyor...` : '');
-</script>
+        socket.on('chat message', function(data) {
+            var messages = document.getElementById('messages');
+            var div = document.createElement('div');
+            div.className = 'bubble';
+            
+            var prefix = "";
+            if(data.isim === 'PAPALES90') {
+                prefix = '<span class="admin">[Yönetici] </span>';
+            }
+            
+            div.innerHTML = prefix + '<b>' + data.isim + ':</b> ' + data.mesaj;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        });
+    </script>
 </body>
 </html>
