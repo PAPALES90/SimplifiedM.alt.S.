@@ -4,6 +4,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { margin: 0; background: #2a9d8f; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        /* v4.0 Etiketi */
+        #version { position: fixed; top: 5px; right: 10px; color: rgba(255,255,255,0.7); font-size: 12px; pointer-events: none; }
+        
         #login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; }
         #chat-area { display: none; flex-direction: column; height: 100%; }
         #messages { flex: 1; overflow-y: scroll; padding: 20px; }
@@ -14,6 +17,7 @@
     </style>
 </head>
 <body>
+    <div id="version">v4.0</div> <!-- v4.0 Etiketi burada -->
 
     <div id="login">
         <h1>Sohbet Odası</h1>
@@ -43,9 +47,7 @@
         }
 
         function handleEnter(e) {
-            if (e.keyCode === 13) {
-                send();
-            }
+            if (e.keyCode === 13) { send(); }
         }
 
         function send() {
@@ -55,21 +57,28 @@
             input.value = "";
         }
 
+        // Eski mesajları yükleme
+        socket.on('init', function(history) {
+            for(var i=0; i<history.length; i++) {
+                addMessage(history[i]);
+            }
+        });
+
+        // Yeni mesaj gelince ekleme
         socket.on('chat', function(data) {
+            addMessage(data);
+        });
+
+        function addMessage(data) {
             var messages = document.getElementById('messages');
             var div = document.createElement('div');
             div.className = 'bubble';
-            
-            var adminTag = "";
-            if (data.user === 'PAPALES90') {
-                adminTag = '<span class="admin">[Yönetici]</span> ';
-            }
-            
+            var adminTag = (data.user === 'PAPALES90') ? '<span class="admin">[Yönetici]</span> ' : '';
             div.innerHTML = adminTag + "<b>" + data.user + "</b>: " + data.msg + 
                             "<sub style='display:block; font-size:10px; color:#888;'>" + data.time + "</sub>";
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
-        });
+        }
     </script>
 </body>
 </html>
