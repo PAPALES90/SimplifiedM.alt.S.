@@ -1,56 +1,37 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { background: #0f2027; color: white; font-family: sans-serif; margin: 0; }
-        #login { position:fixed; top:0; width:100%; height:100%; background: #203a43; display:flex; justify-content:center; align-items:center; }
-        #chat-ui { display:none; height:100vh; display:flex; flex-direction:column; }
-        #chat { flex:1; overflow-y:auto; padding:15px; }
-        .msg { background: #2c3e50; padding: 10px; margin-bottom: 5px; border-radius: 5px; }
-        .admin-tag { color: #ff4d4d; font-weight: bold; font-size: 0.8em; margin-left: 5px; }
-        .zaman { font-size: 0.7em; color: #bdc3c7; float: right; }
-    </style>
-</head>
-<body>
-    <div id="login">
-        <input id="isim" placeholder="Adın ne?"><button onclick="giris()">Giriş</button>
-    </div>
-
-    <div id="chat-ui" style="display:none;">
-        <div id="chat"></div>
-        <div style="padding:10px; background:#203a43; display:flex;">
-            <input id="mesaj" style="flex:1;">
-            <button onclick="gonder()">Gönder</button>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <script>
         var socket = io();
-        var kullaniciAdi = "";
 
+        // 1. Sayfa açıldığında isim kayıtlı mı diye bak
+        window.onload = function() {
+            var eskiIsim = localStorage.getItem('kullaniciAdi');
+            if (eskiIsim) {
+                document.getElementById('isim').value = eskiIsim;
+                giris(); // Otomatik giriş yap
+            }
+        };
+
+        // 2. Giriş yapıldığında ismi tarayıcıya kaydet
         function giris() {
-            kullaniciAdi = document.getElementById('isim').value;
-            if(kullaniciAdi) {
+            var isim = document.getElementById('isim').value;
+            if(isim) {
+                localStorage.setItem('kullaniciAdi', isim); // İsmi hafızaya al
                 document.getElementById('login').style.display = 'none';
                 document.getElementById('chat-ui').style.display = 'flex';
-                socket.emit('yeni-kullanici', kullaniciAdi);
+                socket.emit('yeni-kullanici', isim);
+                window.kullanici = isim;
             }
         }
 
         function gonder() {
             var input = document.getElementById('mesaj');
-            socket.emit('mesaj', {kimden: kullaniciAdi, icerik: input.value});
+            socket.emit('mesaj', {kimden: window.kullanici, icerik: input.value});
             input.value = '';
         }
 
-        // Mesajı ekrana basan fonksiyon
         function ekranaBas(data) {
             var div = document.createElement('div');
             div.className = 'msg';
-            // Yönetici kontrolü
             var adminEtiketi = (data.kimden === 'PAPALES90') ? '<span class="admin-tag">[Yönetici]</span>' : '';
             div.innerHTML = '<span class="zaman">' + data.zaman + '</span> <strong>' + data.kimden + '</strong>' + adminEtiketi + ': ' + data.icerik;
             document.getElementById('chat').appendChild(div);
@@ -59,10 +40,7 @@
 
         socket.on('mesaj', ekranaBas);
 
-        // Sayfa ilk açıldığında geçmişi yükle
         socket.on('gecmis-mesajlar', function(liste) {
             liste.forEach(ekranaBas);
         });
     </script>
-</body>
-</html>
