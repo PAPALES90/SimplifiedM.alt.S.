@@ -1,25 +1,15 @@
-var express = require('express');
-var app = express();
-var http = require('http').createServer(app);
-var io = require('socket.io')(http);
-var path = require('path');
+const express = require('express');
+const app = express();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
 app.use(express.static(__dirname));
 
-io.on('connection', function(socket) {
-    socket.on('login', function(name) {
-        socket.username = name;
-    });
-
-    socket.on('chat message', function(data) {
-        io.emit('chat message', {
-            isim: socket.username,
-            mesaj: data
-        });
+io.on('connection', (socket) => {
+    socket.on('login', (name) => socket.username = name);
+    socket.on('chat', (data) => {
+        io.emit('chat', { user: socket.username, msg: data, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
     });
 });
 
-var port = process.env.PORT || 3000;
-http.listen(port, function() {
-    console.log('Sunucu calisiyor: ' + port);
-});
+http.listen(process.env.PORT || 3000);
