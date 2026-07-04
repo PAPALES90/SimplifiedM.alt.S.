@@ -13,6 +13,9 @@
         /* Özel Stiller */
         .admin-tag { color: red; font-weight: bold; }
         .special-msg { border: 3px solid #ffcc00; background-color: #fff9c4 !important; }
+        
+        /* Bildirim Butonu */
+        .btn-notify { background: #e9c46a; padding: 10px 20px; border-radius: 10px; border: none; margin-top: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -20,7 +23,9 @@
     <div id="login">
         <h1>Sohbet Odası</h1>
         <input id="name" placeholder="İsminiz...">
-        <button onclick="start()">Giriş Yap</button>
+        <button onclick="start()" style="padding: 10px 20px;">Giriş Yap</button>
+        <!-- Bildirim butonu -->
+        <button class="btn-notify" onclick="askNotificationPermission()">Bildirimleri Aç</button>
     </div>
 
     <div id="chat-area">
@@ -35,6 +40,19 @@
     <script>
         var socket = io();
         var myName = "";
+
+        // Bildirim İzin İsteme
+        function askNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("Tarayıcınız bildirimleri desteklemiyor.");
+            } else {
+                Notification.requestPermission().then(function (permission) {
+                    if (permission === "granted") {
+                        alert("Tamamdır! Bildirimler açık.");
+                    }
+                });
+            }
+        }
 
         function start() {
             myName = document.getElementById('name').value;
@@ -59,7 +77,16 @@
         });
 
         // Yeni Mesaj
-        socket.on('chat', function(data) { addMessage(data); });
+        socket.on('chat', function(data) { 
+            addMessage(data); 
+            
+            // Eğer bildirim izni varsa ve sayfa aktif değilse bildirim göster
+            if (Notification.permission === "granted") {
+                new Notification(data.user + " yeni mesaj gönderdi:", {
+                    body: data.msg
+                });
+            }
+        });
 
         function addMessage(data) {
             var messages = document.getElementById('messages');
