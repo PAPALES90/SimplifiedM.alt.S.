@@ -5,28 +5,21 @@ var io = require('socket.io')(http);
 
 app.use(express.static(__dirname));
 
-var history = []; // Mesajları burada tutacağız
+var history = [];
 
 io.on('connection', function(socket) {
-    // Yeni kişi gelince eski mesajları gönder
     socket.emit('init', history);
-
-    socket.on('login', function(name) {
-        socket.username = name;
-    });
-
+    socket.on('login', function(name) { socket.username = name; });
     socket.on('chat', function(data) {
         var msgObj = { 
             user: socket.username, 
-            msg: data, 
+            msg: data.msg, 
+            type: data.type, // 'text' veya 'image'
             time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
         };
-        
         history.push(msgObj);
-        if(history.length > 50) history.shift(); // Hafızayı şişirmemek için son 50 mesajı tut
-        
+        if(history.length > 50) history.shift();
         io.emit('chat', msgObj);
     });
 });
-
 http.listen(process.env.PORT || 3000);
