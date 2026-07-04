@@ -3,51 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
     <style>
-        body { font-family: sans-serif; background: #eee; margin: 0; }
-        #login { position:fixed; top:0; width:100%; height:100%; background:#008069; display:flex; justify-content:center; align-items:center; }
-        #chat-ui { display:none; flex-direction:column; height:100vh; background:white; }
-        #chat { flex:1; overflow-y:auto; padding:10px; border-bottom:1px solid #ccc; }
-        .msg { padding: 8px; border-bottom: 1px solid #eee; }
+        body { background: #0f2027; color: white; font-family: sans-serif; margin: 0; }
+        #login { position:fixed; top:0; width:100%; height:100%; background: #203a43; display:flex; justify-content:center; align-items:center; }
+        #chat-ui { display:none; height:100vh; display:flex; flex-direction:column; }
+        #chat { flex:1; overflow-y:auto; padding:15px; }
+        .msg { background: #2c3e50; padding: 10px; margin-bottom: 5px; border-radius: 5px; }
+        .admin-tag { color: #ff4d4d; font-weight: bold; font-size: 0.8em; margin-left: 5px; }
+        .zaman { font-size: 0.7em; color: #bdc3c7; float: right; }
     </style>
 </head>
 <body>
     <div id="login">
-        <div style="background:white; padding:20px; border-radius:10px;">
-            <input id="isim" placeholder="Adın ne?">
-            <button onclick="giris()">Giriş</button>
-        </div>
+        <input id="isim" placeholder="Adın ne?"><button onclick="giris()">Giriş</button>
     </div>
-    <div id="chat-ui">
+
+    <div id="chat-ui" style="display:none;">
         <div id="chat"></div>
-        <div style="padding:10px; display:flex;">
+        <div style="padding:10px; background:#203a43; display:flex;">
             <input id="mesaj" style="flex:1;">
             <button onclick="gonder()">Gönder</button>
         </div>
     </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <script>
         var socket = io();
+        var kullaniciAdi = "";
+
         function giris() {
-            var isim = document.getElementById('isim').value;
-            if(isim) {
+            kullaniciAdi = document.getElementById('isim').value;
+            if(kullaniciAdi) {
                 document.getElementById('login').style.display = 'none';
                 document.getElementById('chat-ui').style.display = 'flex';
-                socket.emit('yeni-kullanici', isim);
-                window.kullanici = isim;
+                socket.emit('yeni-kullanici', kullaniciAdi);
             }
         }
+
         function gonder() {
-            var msg = document.getElementById('mesaj').value;
-            socket.emit('mesaj', {kimden: window.kullanici, icerik: msg});
-            document.getElementById('mesaj').value = '';
+            var input = document.getElementById('mesaj');
+            socket.emit('mesaj', {kimden: kullaniciAdi, icerik: input.value});
+            input.value = '';
         }
-        socket.on('mesaj', function(data) {
+
+        // Mesajı ekrana basan fonksiyon
+        function ekranaBas(data) {
             var div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = '<strong>' + data.kimden + ':</strong> ' + data.icerik;
+            // Yönetici kontrolü
+            var adminEtiketi = (data.kimden === 'PAPALES90') ? '<span class="admin-tag">[Yönetici]</span>' : '';
+            div.innerHTML = '<span class="zaman">' + data.zaman + '</span> <strong>' + data.kimden + '</strong>' + adminEtiketi + ': ' + data.icerik;
             document.getElementById('chat').appendChild(div);
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+        }
+
+        socket.on('mesaj', ekranaBas);
+
+        // Sayfa ilk açıldığında geçmişi yükle
+        socket.on('gecmis-mesajlar', function(liste) {
+            liste.forEach(ekranaBas);
         });
     </script>
 </body>
