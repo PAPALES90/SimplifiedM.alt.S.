@@ -1,43 +1,25 @@
-const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
-const path = require('path');
+var express = require('express');
+var app = express();
+var http = require('http').createServer(app);
+var io = require('socket.io')(http);
+var path = require('path');
 
 app.use(express.static(__dirname));
 
-let users = {};
-let lastMessageTime = {};
-
-io.on('connection', (socket) => {
-    socket.on('login', (name) => {
-        users[socket.id] = name;
-        io.emit('updateUserList', Object.values(users));
+io.on('connection', function(socket) {
+    socket.on('login', function(name) {
+        socket.username = name;
     });
 
-    socket.on('typing', (isTyping) => {
-        socket.broadcast.emit('userTyping', { name: users[socket.id], isTyping });
-    });
-
-    socket.on('chat message', (data) => {
-        const now = Date.now();
-        if (lastMessageTime[socket.id] && now - lastMessageTime[socket.id] < 2000) {
-            return; // 2 saniye dolmadı, spam engellendi
-        }
-        lastMessageTime[socket.id] = now;
-
+    socket.on('chat message', function(data) {
         io.emit('chat message', {
-            isim: users[socket.id],
-            mesaj: data.mesaj,
-            renk: data.renk,
-            zaman: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            isim: socket.username,
+            mesaj: data
         });
-    });
-
-    socket.on('disconnect', () => {
-        delete users[socket.id];
-        io.emit('updateUserList', Object.values(users));
     });
 });
 
-http.listen(process.env.PORT || 3000);
+var port = process.env.PORT || 3000;
+http.listen(port, function() {
+    console.log('Sunucu calisiyor: ' + port);
+});
