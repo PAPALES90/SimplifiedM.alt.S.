@@ -7,15 +7,9 @@
         #login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; }
         #chat-area { display: none; flex-direction: column; height: 100%; }
         #messages { flex: 1; overflow-y: scroll; padding: 20px; }
-        
         .bubble { background: white; padding: 12px; border-radius: 15px; margin: 10px 0; width: 70%; position: relative; }
-        
-        /* Özel Stiller */
         .admin-tag { color: red; font-weight: bold; }
         .special-msg { border: 3px solid #ffcc00; background-color: #fff9c4 !important; }
-        
-        /* Bildirim Butonu */
-        .btn-notify { background: #e9c46a; padding: 10px 20px; border-radius: 10px; border: none; margin-top: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -23,9 +17,7 @@
     <div id="login">
         <h1>Sohbet Odası</h1>
         <input id="name" placeholder="İsminiz...">
-        <button onclick="start()" style="padding: 10px 20px;">Giriş Yap</button>
-        <!-- Bildirim butonu -->
-        <button class="btn-notify" onclick="askNotificationPermission()">Bildirimleri Aç</button>
+        <button onclick="start()" style="padding: 10px 30px;">Giriş Yap</button>
     </div>
 
     <div id="chat-area">
@@ -40,19 +32,8 @@
     <script>
         var socket = io();
         var myName = "";
-
-        // Bildirim İzin İsteme
-        function askNotificationPermission() {
-            if (!("Notification" in window)) {
-                alert("Tarayıcınız bildirimleri desteklemiyor.");
-            } else {
-                Notification.requestPermission().then(function (permission) {
-                    if (permission === "granted") {
-                        alert("Tamamdır! Bildirimler açık.");
-                    }
-                });
-            }
-        }
+        // Ses dosyasını hazırladık
+        var audio = new Audio('https://actions.google.com/sounds/v1/notifications/beep_short.ogg');
 
         function start() {
             myName = document.getElementById('name').value;
@@ -71,32 +52,22 @@
 
         function handleEnter(e) { if (e.keyCode === 13) send(); }
 
-        // Tarihçe Yükleme
         socket.on('init', function(history) {
             for(var i=0; i<history.length; i++) { addMessage(history[i]); }
         });
 
-        // Yeni Mesaj
         socket.on('chat', function(data) { 
             addMessage(data); 
-            
-            // Eğer bildirim izni varsa ve sayfa aktif değilse bildirim göster
-            if (Notification.permission === "granted") {
-                new Notification(data.user + " yeni mesaj gönderdi:", {
-                    body: data.msg
-                });
-            }
+            // Mesaj gelince BİP sesi çal
+            audio.play().catch(function() {}); 
         });
 
         function addMessage(data) {
             var messages = document.getElementById('messages');
             var div = document.createElement('div');
             
-            // 1. Yönetici Kontrolü
             var adminClass = (data.user === 'PAPALES90') ? 'admin-tag' : '';
             var adminLabel = (data.user === 'PAPALES90') ? '[Yönetici] ' : '';
-
-            // 2. Özel Kelime Kontrolü (Sarı Çerçeve)
             var isSpecial = data.msg.toLowerCase().includes('asvbnajknsğfkasğsf');
             div.className = 'bubble ' + (isSpecial ? 'special-msg' : '');
 
