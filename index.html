@@ -24,7 +24,7 @@
     <div id="chat-area">
         <div id="messages"></div>
         <div style="display: flex;">
-            <input id="msg" style="flex:1" placeholder="Mesaj yaz...">
+            <input id="msg" style="flex:1" placeholder="Mesaj yaz..." onkeydown="handleEnter(event)">
             <button onclick="send()">Gönder</button>
         </div>
     </div>
@@ -40,6 +40,12 @@
             socket.emit('login', myName);
             document.getElementById('login').style.display = 'none';
             document.getElementById('chat-area').style.display = 'flex';
+        }
+
+        function handleEnter(e) {
+            if (e.keyCode === 13) {
+                send();
+            }
         }
 
         function send() {
