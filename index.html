@@ -4,21 +4,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { margin: 0; background: #2a9d8f; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
-        /* v4.0 Etiketi */
-        #version { position: fixed; top: 5px; right: 10px; color: rgba(255,255,255,0.7); font-size: 12px; pointer-events: none; }
-        
         #login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; }
         #chat-area { display: none; flex-direction: column; height: 100%; }
         #messages { flex: 1; overflow-y: scroll; padding: 20px; }
-        .bubble { background: white; padding: 12px; border-radius: 20px; margin: 10px 0; width: 70%; }
+        /* Baloncuklar */
+        .bubble { background: white; padding: 12px; border-radius: 15px; margin: 10px 0; width: 70%; position: relative; }
+        .my-bubble { background: #d4edda; align-self: flex-end; margin-left: auto; } /* Senin mesajların yeşil */
         .admin { color: #e76f51; font-weight: bold; }
         input { padding: 15px; border-radius: 25px; border: none; margin: 10px; }
         button { padding: 15px 30px; border-radius: 25px; border: none; background: #264653; color: white; }
+        img { max-width: 100%; border-radius: 10px; }
     </style>
 </head>
 <body>
-    <div id="version">v4.0</div> <!-- v4.0 Etiketi burada -->
-
     <div id="login">
         <h1>Sohbet Odası</h1>
         <input id="name" placeholder="İsminiz...">
@@ -27,8 +25,10 @@
 
     <div id="chat-area">
         <div id="messages"></div>
-        <div style="display: flex;">
-            <input id="msg" style="flex:1" placeholder="Mesaj yaz..." onkeydown="handleEnter(event)">
+        <div style="display: flex; padding: 10px; background: #f0f0f0;">
+            <input id="msg" style="flex:1" placeholder="Mesaj..." onkeydown="handleEnter(event)">
+            <input type="file" id="fileInput" style="display:none" onchange="sendImage(this)">
+            <button onclick="document.getElementById('fileInput').click()">📷</button>
             <button onclick="send()">Gönder</button>
         </div>
     </div>
@@ -36,49 +36,59 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         var socket = io();
-        var myName = "";
+        var bildirimSesi = new Audio('https://actions.google.com/sounds/v1/notifications/beep_short.ogg');
+        
+        // İsmi otomatik hatırla
+        window.onload = function() {
+            var savedName = localStorage.getItem('chatName');
+            if(savedName) {
+                document.getElementById('name').value = savedName;
+            }
+        };
 
         function start() {
-            myName = document.getElementById('name').value;
-            if(myName === "") return;
-            socket.emit('login', myName);
+            var name = document.getElementById('name').value;
+            if(name === "") return;
+            localStorage.setItem('chatName', name); // İsmi kaydet
+            socket.emit('login', name);
             document.getElementById('login').style.display = 'none';
             document.getElementById('chat-area').style.display = 'flex';
-        }
-
-        function handleEnter(e) {
-            if (e.keyCode === 13) { send(); }
         }
 
         function send() {
             var input = document.getElementById('msg');
             if(input.value === "") return;
-            socket.emit('chat', input.value);
+            socket.emit('chat', {msg: input.value, type: 'text'});
             input.value = "";
         }
 
-        // Eski mesajları yükleme
-        socket.on('init', function(history) {
-            for(var i=0; i<history.length; i++) {
-                addMessage(history[i]);
-            }
-        });
+        // Resim gönderme
+        function sendImage(input) {
+            var file = input.files[0];
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                socket.emit('chat', {msg: e.target.result, type: 'image'});
+            };
+            reader.readAsDataURL(file);
+        }
 
-        // Yeni mesaj gelince ekleme
         socket.on('chat', function(data) {
-            addMessage(data);
-        });
-
-        function addMessage(data) {
             var messages = document.getElementById('messages');
             var div = document.createElement('div');
-            div.className = 'bubble';
-            var adminTag = (data.user === 'PAPALES90') ? '<span class="admin">[Yönetici]</span> ' : '';
-            div.innerHTML = adminTag + "<b>" + data.user + "</b>: " + data.msg + 
-                            "<sub style='display:block; font-size:10px; color:#888;'>" + data.time + "</sub>";
+            var isMine = (data.user === localStorage.getItem('chatName'));
+            
+            div.className = 'bubble ' + (isMine ? 'my-bubble' : '');
+            
+            var content = (data.type === 'image') ? '<img src="'+data.msg+'">' : data.msg;
+            div.innerHTML = "<b>" + data.user + "</b>: " + content + 
+                            "<sub style='display:block; font-size:9px; color:#888;'>"+data.time+" • Görüldü✓</sub>";
+            
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
-        }
+            bildirimSesi.play();
+        });
+
+        function handleEnter(e) { if (e.keyCode === 13) send(); }
     </script>
 </body>
 </html>
