@@ -1,34 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { margin: 0; background: #2a9d8f; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        body { margin: 0; padding: 0; background: #2a9d8f; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         #login { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; }
-        #chat-area { display: none; flex-direction: column; height: 100%; }
-        #messages { flex: 1; overflow-y: scroll; padding: 20px; }
-        /* Baloncuklar */
-        .bubble { background: white; padding: 12px; border-radius: 15px; margin: 10px 0; width: 70%; position: relative; }
-        .my-bubble { background: #d4edda; align-self: flex-end; margin-left: auto; } /* Senin mesajların yeşil */
-        .admin { color: #e76f51; font-weight: bold; }
-        input { padding: 15px; border-radius: 25px; border: none; margin: 10px; }
-        button { padding: 15px 30px; border-radius: 25px; border: none; background: #264653; color: white; }
-        img { max-width: 100%; border-radius: 10px; }
+        #chat { display: none; flex-direction: column; height: 100%; }
+        #messages { flex: 1; overflow-y: auto; padding: 10px; }
+        .bubble { background: white; padding: 10px; border-radius: 15px; margin: 5px; max-width: 80%; word-wrap: break-word; }
+        .input-area { display: flex; padding: 10px; background: #fff; }
+        input { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 15px 20px; background: #264653; color: white; border: none; border-radius: 5px; margin-left: 5px; }
     </style>
 </head>
 <body>
+
     <div id="login">
-        <h1>Sohbet Odası</h1>
-        <input id="name" placeholder="İsminiz...">
-        <button onclick="start()">Giriş Yap</button>
+        <h2>Sohbet Odası</h2>
+        <input id="n" placeholder="İsminiz...">
+        <button onclick="login()" style="width: 200px; margin-top: 10px;">Giriş Yap</button>
     </div>
 
-    <div id="chat-area">
+    <div id="chat">
         <div id="messages"></div>
-        <div style="display: flex; padding: 10px; background: #f0f0f0;">
-            <input id="msg" style="flex:1" placeholder="Mesaj..." onkeydown="handleEnter(event)">
-            <input type="file" id="fileInput" style="display:none" onchange="sendImage(this)">
-            <button onclick="document.getElementById('fileInput').click()">📷</button>
+        <div class="input-area">
+            <input id="m" autocomplete="off" placeholder="Mesaj yaz...">
             <button onclick="send()">Gönder</button>
         </div>
     </div>
@@ -36,59 +32,31 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         var socket = io();
-        var bildirimSesi = new Audio('https://actions.google.com/sounds/v1/notifications/beep_short.ogg');
-        
-        // İsmi otomatik hatırla
-        window.onload = function() {
-            var savedName = localStorage.getItem('chatName');
-            if(savedName) {
-                document.getElementById('name').value = savedName;
-            }
-        };
+        var name = "";
 
-        function start() {
-            var name = document.getElementById('name').value;
-            if(name === "") return;
-            localStorage.setItem('chatName', name); // İsmi kaydet
-            socket.emit('login', name);
+        function login() {
+            name = document.getElementById('n').value;
+            if(!name) return;
             document.getElementById('login').style.display = 'none';
-            document.getElementById('chat-area').style.display = 'flex';
+            document.getElementById('chat').style.display = 'flex';
+            socket.emit('login', name);
         }
 
         function send() {
-            var input = document.getElementById('msg');
-            if(input.value === "") return;
-            socket.emit('chat', {msg: input.value, type: 'text'});
-            input.value = "";
-        }
-
-        // Resim gönderme
-        function sendImage(input) {
-            var file = input.files[0];
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                socket.emit('chat', {msg: e.target.result, type: 'image'});
-            };
-            reader.readAsDataURL(file);
+            var msg = document.getElementById('m').value;
+            if(!msg) return;
+            socket.emit('chat', {user: name, msg: msg});
+            document.getElementById('m').value = '';
         }
 
         socket.on('chat', function(data) {
-            var messages = document.getElementById('messages');
+            var msgs = document.getElementById('messages');
             var div = document.createElement('div');
-            var isMine = (data.user === localStorage.getItem('chatName'));
-            
-            div.className = 'bubble ' + (isMine ? 'my-bubble' : '');
-            
-            var content = (data.type === 'image') ? '<img src="'+data.msg+'">' : data.msg;
-            div.innerHTML = "<b>" + data.user + "</b>: " + content + 
-                            "<sub style='display:block; font-size:9px; color:#888;'>"+data.time+" • Görüldü✓</sub>";
-            
-            messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
-            bildirimSesi.play();
+            div.className = 'bubble';
+            div.innerHTML = '<b>' + data.user + ':</b> ' + data.msg;
+            msgs.appendChild(div);
+            msgs.scrollTop = msgs.scrollHeight;
         });
-
-        function handleEnter(e) { if (e.keyCode === 13) send(); }
     </script>
 </body>
 </html>
